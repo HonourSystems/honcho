@@ -847,32 +847,25 @@ class HonchoWorker {
  * @param request - The incoming request
  * @returns Configuration object or null if invalid
  */
-function parseConfig(request: Request): HonchoConfig | null {
-  // Get API key from Authorization header
+function parseConfig(request: Request, env?: any): HonchoConfig | null {
+  // Get API key from Authorization header (optional for local dev)
   const authHeader = request.headers.get("Authorization");
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return null;
-  }
-  const apiKey = authHeader.substring(7);
+  const apiKey = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : (env?.HONCHO_API_KEY || "local-dev-key");
 
-  if (!apiKey) {
-    return null;
-  }
-
-  const userName = request.headers.get("X-Honcho-User-Name");
+  const userName = request.headers.get("X-Honcho-User-Name") || env?.HONCHO_DEFAULT_USER;
   if (!userName) {
     return null;
   }
 
-  // Get configuration from headers with proper defaults
+  // Get configuration from headers with env var fallbacks
   const config: HonchoConfig = {
     apiKey,
     userName,
     baseUrl:
-      request.headers.get("X-Honcho-Base-URL") || "https://api.honcho.dev",
-    workspaceId: request.headers.get("X-Honcho-Workspace-ID") || "default",
+      request.headers.get("X-Honcho-Base-URL") || env?.HONCHO_BASE_URL || "https://api.honcho.dev",
+    workspaceId: request.headers.get("X-Honcho-Workspace-ID") || env?.HONCHO_DEFAULT_WORKSPACE || "default",
     assistantName:
-      request.headers.get("X-Honcho-Assistant-Name") || "Assistant",
+      request.headers.get("X-Honcho-Assistant-Name") || env?.HONCHO_DEFAULT_ASSISTANT || "Assistant",
   };
 
   return config;
@@ -2103,7 +2096,7 @@ async function executeToolCall(
  * Main Cloudflare Worker export
  */
 export default {
-  async fetch(request: Request): Promise<Response> {
+  async fetch(request: Request, env?: any): Promise<Response> {
     // Handle CORS preflight requests
     if (request.method === "OPTIONS") {
       return new Response(null, {
@@ -2148,7 +2141,7 @@ export default {
     }
 
     // Parse configuration
-    const config = parseConfig(request);
+    const config = parseConfig(request, env);
     if (!config && requestData.method !== "initialize") {
       return createErrorResponse(
         requestData.id ?? null,

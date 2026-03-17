@@ -52,7 +52,7 @@ class _EmbeddingClient:
                 or "https://openrouter.ai/api/v1"
             )
             self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
-            self.model = "openai/text-embedding-3-small"
+            self.model = settings.LLM.EMBEDDING_MODEL or "openai/text-embedding-3-small"
             self.max_embedding_tokens = settings.MAX_EMBEDDING_TOKENS
             self.max_batch_size = 2048  # Same as OpenAI
         else:  # openai
@@ -61,7 +61,7 @@ class _EmbeddingClient:
             if not api_key:
                 raise ValueError("OpenAI API key is required")
             self.client = AsyncOpenAI(api_key=api_key)
-            self.model = "text-embedding-3-small"
+            self.model = settings.LLM.EMBEDDING_MODEL or "text-embedding-3-small"
             self.max_embedding_tokens = settings.MAX_EMBEDDING_TOKENS
             self.max_batch_size = 2048  # OpenAI batch limit
 
@@ -89,7 +89,7 @@ class _EmbeddingClient:
             return response.embeddings[0].values
         else:  # openai
             response = await self.client.embeddings.create(
-                model=self.model, input=query
+                model=self.model, input=query, dimensions=settings.VECTOR_STORE.DIMENSIONS
             )
             return response.data[0].embedding
 
@@ -126,6 +126,7 @@ class _EmbeddingClient:
                     response = await self.client.embeddings.create(
                         input=batch,
                         model=self.model,
+                        dimensions=settings.VECTOR_STORE.DIMENSIONS,
                     )
                     embeddings.extend([data.embedding for data in response.data])
             except Exception as e:
@@ -264,7 +265,8 @@ class _EmbeddingClient:
                                 )
                 else:  # openai / openrouter
                     response = await self.client.embeddings.create(
-                        model=self.model, input=[item.text for item in batch]
+                        model=self.model, input=[item.text for item in batch],
+                        dimensions=settings.VECTOR_STORE.DIMENSIONS,
                     )
                     for item, embedding_data in zip(batch, response.data, strict=True):
                         result[item.text_id][item.chunk_index] = (

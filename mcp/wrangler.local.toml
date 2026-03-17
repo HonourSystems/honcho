@@ -1,0 +1,13 @@
+name = "honcho-mcp"
+main = "worker.ts"
+compatibility_date = "2024-12-09"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+HONCHO_BASE_URL = "http://api:8000"
+HONCHO_DEFAULT_WORKSPACE = "facilitator"
+HONCHO_DEFAULT_USER = "operator"
+HONCHO_DEFAULT_ASSISTANT = "facilitator-agent"
+
+[observability.logs]
+enabled = true
